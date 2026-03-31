@@ -1,0 +1,23 @@
+# Build output
+build/
+.gradle/
+
+# IDE files
+.idea/
+*.iml
+.DS_Store
+
+# Local properties file (contains SDK path and other sensitive info)
+local.properties
+
+# Keystore files
+*.jks
+*.keystore
+
+# Test Captures
+captures/
+
+# User-requested ignores
+DEVELOPMENT_PLAN.md
+Plin_Ag2_elements/
+Plin_Ag2/

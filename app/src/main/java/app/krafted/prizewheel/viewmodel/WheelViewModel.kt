@@ -1,8 +1,6 @@
 package app.krafted.prizewheel.viewmodel
 
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.krafted.prizewheel.R
@@ -13,9 +11,12 @@ import app.krafted.prizewheel.data.WheelDao
 import app.krafted.prizewheel.game.WheelEngine
 import app.krafted.prizewheel.game.WheelSegment
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
@@ -31,11 +32,16 @@ data class WheelUiState(
     val currentBackground: Int = R.drawable.plin_back_5
 )
 
+data class SpinEvent(val targetRotation: Float, val result: WheelSegment)
+
 class WheelViewModel(private val wheelDao: WheelDao) : ViewModel() {
     val rotation = Animatable(0f)
 
     private val _uiState = MutableStateFlow(WheelUiState())
     val uiState: StateFlow<WheelUiState> = _uiState.asStateFlow()
+
+    private val _spinEvents = MutableSharedFlow<SpinEvent>()
+    val spinEvents: SharedFlow<SpinEvent> = _spinEvents.asSharedFlow()
 
     val spinHistory: StateFlow<List<SpinResultEntity>> = wheelDao.getRecentSpinResults()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -72,27 +78,24 @@ class WheelViewModel(private val wheelDao: WheelDao) : ViewModel() {
 
         val result = WheelEngine.spinWheel()
         val targetAngle = WheelEngine.getSegmentAngle(result)
-        val targetRotation = rotation.value + (FULL_ROTATIONS * 360f) + landingRotation(targetAngle)
+        val target = rotation.value + (FULL_ROTATIONS * 360f) + landingRotation(targetAngle)
 
-        viewModelScope.launch {
-            val deductedCoins = state.coins - SPIN_COST
-            _uiState.update {
-                it.copy(
-                    coins = deductedCoins,
-                    isSpinning = true,
-                    canSpin = false
-                )
-            }
-            wheelDao.updateCoinBalance(deductedCoins)
-            rotation.animateTo(
-                targetValue = targetRotation,
-                animationSpec = tween(
-                    durationMillis = SPIN_DURATION_MS,
-                    easing = FastOutSlowInEasing
-                )
+        val deductedCoins = state.coins - SPIN_COST
+        _uiState.update {
+            it.copy(
+                coins = deductedCoins,
+                isSpinning = true,
+                canSpin = false
             )
-            onSpinComplete(result)
         }
+        viewModelScope.launch {
+            wheelDao.updateCoinBalance(deductedCoins)
+            _spinEvents.emit(SpinEvent(target, result))
+        }
+    }
+
+    fun onAnimationComplete(result: WheelSegment) {
+        viewModelScope.launch { onSpinComplete(result) }
     }
 
     fun refill() {

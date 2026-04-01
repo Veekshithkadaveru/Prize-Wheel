@@ -1,1 +1,11 @@
 /build
+/release
+*.apk
+*.aab
+.DS_Store
+*.iml
+.gradle/
+.idea/
+*.log
+*.swp
+*~

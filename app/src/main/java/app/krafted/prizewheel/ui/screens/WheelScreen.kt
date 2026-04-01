@@ -53,9 +53,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.krafted.prizewheel.R
 import app.krafted.prizewheel.game.WheelSegment
 import app.krafted.prizewheel.ui.components.PointerArrow
 import app.krafted.prizewheel.ui.components.PrizeWheel
@@ -144,7 +146,7 @@ fun WheelScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 CoinBalancePill(coins = uiState.coins)
-                SpinCountPill(used = uiState.paidSpinsUsed, total = 10)
+                SpinCountPill(used = uiState.paidSpinsUsed, total = WheelViewModel.MAX_SPINS_PER_SESSION)
             }
 
             Spacer(Modifier.height(16.dp))
@@ -212,7 +214,7 @@ fun WheelScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(Modifier.height(12.dp))
                         RefillButton(
-                            text = "REFILL COINS",
+                            text = stringResource(R.string.refill_coins),
                             onClick = { viewModel.refill() }
                         )
                     }
@@ -254,7 +256,7 @@ fun WheelScreen(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = "SESSION COMPLETE",
+                        text = stringResource(R.string.session_complete),
                         color = Color(0xFFFFD700),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
@@ -262,14 +264,14 @@ fun WheelScreen(
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "+${"%,d".format(uiState.sessionCoinsWon)} coins won",
+                        text = stringResource(R.string.session_coins_won, "%,d".format(uiState.sessionCoinsWon)),
                         color = Color(0xFF67D4FF),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Spacer(Modifier.height(24.dp))
                     Text(
-                        text = "ENTER YOUR NAME",
+                        text = stringResource(R.string.enter_your_name),
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -281,7 +283,7 @@ fun WheelScreen(
                         onValueChange = { nameInput = it },
                         singleLine = true,
                         placeholder = {
-                            Text("Your name", color = Color.White.copy(alpha = 0.3f))
+                            Text(stringResource(R.string.name_hint), color = Color.White.copy(alpha = 0.3f))
                         },
                         colors = androidx.compose.material3.TextFieldDefaults.colors(
                             focusedTextColor = Color.White,
@@ -313,7 +315,7 @@ fun WheelScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "SAVE & NEW GAME",
+                            text = stringResource(R.string.save_new_game),
                             color = Color(0xFF080B14),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Black,
@@ -338,7 +340,7 @@ fun WheelScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "HOME SCREEN",
+                            text = stringResource(R.string.btn_home_screen),
                             color = Color.White.copy(alpha = 0.8f),
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Black,
@@ -417,7 +419,7 @@ private fun SpinCountPill(used: Int, total: Int) {
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
         Text(
-            text = "SPINS: $used/$total",
+            text = stringResource(R.string.spins_count, used, total),
             color = if (used >= total) Color(0xFFFF52D9) else Color(0xFF67D4FF),
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
@@ -518,7 +520,7 @@ private fun SpinButton(onClick: () -> Unit, enabled: Boolean, isSpinning: Boolea
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = if (isSpinning) "..." else "SPIN",
+                    text = if (isSpinning) "..." else stringResource(R.string.btn_spin),
                     color = Color.White,
                     fontSize = if (isSpinning) 28.sp else 22.sp,
                     fontWeight = FontWeight.Black,
@@ -542,7 +544,7 @@ private fun SpinButton(onClick: () -> Unit, enabled: Boolean, isSpinning: Boolea
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "$spinCost COINS",
+                        text = stringResource(R.string.spin_coins_cost, spinCost),
                         color = Color.White.copy(alpha = 0.7f),
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,

@@ -30,9 +30,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.krafted.prizewheel.R
 import app.krafted.prizewheel.data.LeaderboardEntry
 import app.krafted.prizewheel.viewmodel.WheelViewModel
 
@@ -68,21 +70,21 @@ fun LeaderboardScreen(
                 IconButton(onClick = onNavigateBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
+                        contentDescription = stringResource(R.string.cd_back),
                         tint = Color(0xFFFFD700)
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "LEADERBOARD",
+                        text = stringResource(R.string.nav_leaderboard),
                         color = Color(0xFFFFD700),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 2.sp
                     )
                     Text(
-                        text = "${entries.size} players",
+                        text = stringResource(R.string.players_count, entries.size),
                         color = Color(0xFF8890A5),
                         fontSize = 13.sp
                     )
@@ -100,14 +102,14 @@ fun LeaderboardScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "No scores yet",
+                            text = stringResource(R.string.leaderboard_empty_title),
                             color = Color(0xFF555D73),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Medium
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Go spin the wheel!",
+                            text = stringResource(R.string.leaderboard_empty_cta),
                             color = Color(0xFF3A4160),
                             fontSize = 14.sp
                         )
@@ -122,7 +124,7 @@ fun LeaderboardScreen(
                 ) {
                     Spacer(Modifier.width(36.dp))
                     Text(
-                        text = "PLAYER",
+                        text = stringResource(R.string.leaderboard_col_player),
                         color = Color(0xFF555D73),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -130,7 +132,7 @@ fun LeaderboardScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = "TOTAL COINS",
+                        text = stringResource(R.string.leaderboard_col_coins),
                         color = Color(0xFF555D73),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -235,7 +237,7 @@ private fun LeaderboardRow(rank: Int, entry: LeaderboardEntry) {
         Spacer(Modifier.width(4.dp))
 
         Text(
-            text = "pts",
+            text = stringResource(R.string.leaderboard_pts),
             color = Color(0xFF8890A5),
             fontSize = 11.sp,
             fontWeight = FontWeight.Normal

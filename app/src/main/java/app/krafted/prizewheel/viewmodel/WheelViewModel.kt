@@ -108,19 +108,26 @@ class WheelViewModel(private val wheelDao: WheelDao) : ViewModel() {
 
         val deductedCoins = state.coins - SPIN_COST
         val newSpinsUsed = state.paidSpinsUsed + 1
-        val sessionDone = newSpinsUsed >= MAX_SPINS_PER_SESSION
 
-        _uiState.update {
-            it.copy(
-                coins = deductedCoins,
-                isSpinning = true,
-                canSpin = false,
-                paidSpinsUsed = newSpinsUsed
-            )
-        }
+        // Immediately lock UI to prevent double-spins before async DB write
+        _uiState.update { it.copy(isSpinning = true, canSpin = false) }
+
         viewModelScope.launch {
-            wheelDao.updateCoinBalance(deductedCoins)
-            _spinEvents.emit(SpinEvent(target, result))
+            try {
+                wheelDao.updateCoinBalance(deductedCoins)
+                _uiState.update { it.copy(coins = deductedCoins, paidSpinsUsed = newSpinsUsed) }
+                _spinEvents.emit(SpinEvent(target, result))
+            } catch (e: Exception) {
+                // DB write failed — roll back UI to allow retry
+                _uiState.update {
+                    it.copy(
+                        coins = state.coins,
+                        isSpinning = false,
+                        canSpin = canSpinCheck(state.coins, state.paidSpinsUsed, state.sessionComplete),
+                        paidSpinsUsed = state.paidSpinsUsed
+                    )
+                }
+            }
         }
     }
 
@@ -140,14 +147,19 @@ class WheelViewModel(private val wheelDao: WheelDao) : ViewModel() {
             )
         }
         viewModelScope.launch {
-            wheelDao.updateCoinBalance(INITIAL_COIN_BALANCE)
+            try {
+                wheelDao.updateCoinBalance(INITIAL_COIN_BALANCE)
+            } catch (e: Exception) {
+                // Best-effort; UI is already reset
+            }
         }
     }
 
     fun refill() {
-        if (_uiState.value.dailyRefillClaimed) return
+        val currentState = _uiState.value
+        if (currentState.dailyRefillClaimed) return
         val now = System.currentTimeMillis()
-        val newBalance = _uiState.value.coins + DAILY_REFILL_AMOUNT
+        val newBalance = currentState.coins + DAILY_REFILL_AMOUNT
         _uiState.update {
             it.copy(
                 coins = newBalance,
@@ -157,8 +169,20 @@ class WheelViewModel(private val wheelDao: WheelDao) : ViewModel() {
             )
         }
         viewModelScope.launch {
-            wheelDao.updateCoinBalance(newBalance)
-            wheelDao.updateLastRefillTimestamp(now)
+            try {
+                wheelDao.updateCoinBalance(newBalance)
+                wheelDao.updateLastRefillTimestamp(now)
+            } catch (e: Exception) {
+                // Roll back UI state on DB failure
+                _uiState.update {
+                    it.copy(
+                        coins = currentState.coins,
+                        canSpin = canSpinCheck(currentState.coins, it.paidSpinsUsed, it.sessionComplete),
+                        dailyRefillClaimed = false,
+                        lastRefillTimestamp = currentState.lastRefillTimestamp
+                    )
+                }
+            }
         }
     }
 
@@ -168,7 +192,11 @@ class WheelViewModel(private val wheelDao: WheelDao) : ViewModel() {
 
     fun submitSession(name: String) {
         viewModelScope.launch {
-            wheelDao.updateSessionPlayerName(currentSessionId, name)
+            try {
+                wheelDao.updateSessionPlayerName(currentSessionId, name)
+            } catch (e: Exception) {
+                // Best-effort name update; proceed to start new session
+            }
             startNewSession()
         }
     }
@@ -179,16 +207,20 @@ class WheelViewModel(private val wheelDao: WheelDao) : ViewModel() {
         val sessionDone = state.paidSpinsUsed >= MAX_SPINS_PER_SESSION
         val newSessionCoins = state.sessionCoinsWon + result.coinReward
 
-        wheelDao.updateCoinBalance(newBalance)
-        wheelDao.insertSpinResult(
-            SpinResultEntity(
-                playerName = "Anonymous", // Placeholder until session submission
-                segmentName = result.name,
-                coinsWon = result.coinReward,
-                timestamp = System.currentTimeMillis(),
-                sessionId = currentSessionId
+        try {
+            wheelDao.updateCoinBalance(newBalance)
+            wheelDao.insertSpinResult(
+                SpinResultEntity(
+                    playerName = "Anonymous", // Placeholder until session submission
+                    segmentName = result.name,
+                    coinsWon = result.coinReward,
+                    timestamp = System.currentTimeMillis(),
+                    sessionId = currentSessionId
+                )
             )
-        )
+        } catch (e: Exception) {
+            // DB write failed; spin result displayed but not persisted
+        }
         _uiState.update {
             it.copy(
                 coins = newBalance,

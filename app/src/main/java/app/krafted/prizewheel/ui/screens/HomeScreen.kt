@@ -41,11 +41,13 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -65,6 +67,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.krafted.prizewheel.R
@@ -99,6 +103,9 @@ fun HomeScreen(
     onRefill: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val activity = LocalContext.current as? Activity
+    BackHandler { activity?.finish() }
+
     Box(modifier = modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.plin_back_1),
@@ -203,8 +210,11 @@ fun HomeScreen(
                     modifier = Modifier.weight(1f)
                 )
                 PremiumNavCard(
-                    label = "LEADERBOARD",
-                    subtitle = if (leaderboardCount > 0) "$leaderboardCount players" else "No scores yet",
+                    label = stringResource(R.string.nav_leaderboard),
+                    subtitle = if (leaderboardCount > 0)
+                        stringResource(R.string.players_count, leaderboardCount)
+                    else
+                        stringResource(R.string.leaderboard_empty_title),
                     accentColor = HomeBlue,
                     hasBadge = false,
                     onClick = onNavigateToLeaderboard,
@@ -331,7 +341,7 @@ private fun PrizeWheelTitle() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(contentAlignment = Alignment.Center) {
             Text(
-                text = "PRIZE",
+                text = stringResource(R.string.title_prize),
                 style = TextStyle(
                     fontSize = 46.sp,
                     fontWeight = FontWeight.Black,
@@ -341,7 +351,7 @@ private fun PrizeWheelTitle() {
                 modifier = Modifier.blur(12.dp)
             )
             Text(
-                text = "PRIZE",
+                text = stringResource(R.string.title_prize),
                 style = TextStyle(
                     fontSize = 46.sp,
                     fontWeight = FontWeight.Black,
@@ -361,7 +371,7 @@ private fun PrizeWheelTitle() {
         Spacer(modifier = Modifier.height(2.dp))
 
         Text(
-            text = "W  H  E  E  L",
+            text = stringResource(R.string.title_wheel),
             style = TextStyle(
                 fontSize = 22.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -733,7 +743,7 @@ private fun EpicPlayButton(
 
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = if (canSpin) "SPIN" else "REFILL",
+                        text = if (canSpin) stringResource(R.string.btn_spin) else stringResource(R.string.btn_refill),
                         style = TextStyle(
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Black,
@@ -765,7 +775,7 @@ private fun EpicPlayButton(
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = if (canSpin) "GET LUCKY" else "THEN PLAY",
+                        text = if (canSpin) stringResource(R.string.btn_spin_subtitle) else stringResource(R.string.btn_refill_subtitle),
                         style = TextStyle(
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -780,7 +790,7 @@ private fun EpicPlayButton(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "${WheelViewModel.SPIN_COST} coins per spin",
+            text = stringResource(R.string.coins_per_spin, WheelViewModel.SPIN_COST),
             color = HomeCream.copy(alpha = 0.56f),
             fontSize = 12.sp,
             letterSpacing = 1.sp
@@ -874,7 +884,7 @@ private fun PremiumNavCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = "Locked",
+                    contentDescription = stringResource(R.string.cd_locked),
                     tint = Color.White,
                     modifier = Modifier.size(11.dp)
                 )
@@ -959,7 +969,7 @@ private fun DailyRewardCard(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "DAILY REWARD",
+                text = stringResource(R.string.daily_reward),
                 color = HomeCream,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
@@ -978,7 +988,7 @@ private fun DailyRewardCard(
                 )
             } else {
                 Text(
-                    text = "Tap to claim +100",
+                    text = stringResource(R.string.daily_reward_claim, WheelViewModel.DAILY_REFILL_AMOUNT),
                     color = accentColor,
                     fontSize = 9.sp,
                     fontWeight = FontWeight.Normal,
@@ -1000,7 +1010,7 @@ private fun DailyRewardCard(
             ) {
                 Icon(
                     imageVector = Icons.Default.Lock,
-                    contentDescription = "Locked",
+                    contentDescription = stringResource(R.string.cd_locked),
                     tint = Color.White,
                     modifier = Modifier.size(11.dp)
                 )
@@ -1011,11 +1021,14 @@ private fun DailyRewardCard(
 
 @Composable
 private fun rememberCountdown24h(lastRefillTimestamp: Long): String {
-    var countdown by remember { mutableStateOf(calcCountdown24h(lastRefillTimestamp)) }
-    LaunchedEffect(lastRefillTimestamp) {
+    val countdown by produceState(
+        initialValue = calcCountdown24h(lastRefillTimestamp),
+        key1 = lastRefillTimestamp
+    ) {
         while (true) {
             kotlinx.coroutines.delay(1_000L)
-            countdown = calcCountdown24h(lastRefillTimestamp)
+            value = calcCountdown24h(lastRefillTimestamp)
+            if ((lastRefillTimestamp + 24 * 3_600_000L - System.currentTimeMillis()) <= 0L) break
         }
     }
     return countdown

@@ -1,3 +1,45 @@
 <resources>
     <string name="app_name">Prize Wheel</string>
+
+    <!-- Title / Splash -->
+    <string name="title_prize">PRIZE</string>
+    <string name="title_wheel">W  H  E  E  L</string>
+    <string name="spin_to_win">SPIN TO WIN</string>
+
+    <!-- Play button on Home -->
+    <string name="btn_spin">SPIN</string>
+    <string name="btn_spin_subtitle">GET LUCKY</string>
+    <string name="btn_refill">REFILL</string>
+    <string name="btn_refill_subtitle">THEN PLAY</string>
+    <string name="coins_per_spin">%d coins per spin</string>
+
+    <!-- Cards on Home -->
+    <string name="nav_leaderboard">LEADERBOARD</string>
+    <string name="daily_reward">DAILY REWARD</string>
+    <string name="daily_reward_claim">Tap to claim +%d</string>
+
+    <!-- Wheel screen -->
+    <string name="spins_count">SPINS: %1$d/%2$d</string>
+    <string name="refill_coins">REFILL COINS</string>
+    <string name="spin_coins_cost">%d COINS</string>
+
+    <!-- Session complete dialog -->
+    <string name="session_complete">SESSION COMPLETE</string>
+    <string name="session_coins_won">+%s coins won</string>
+    <string name="enter_your_name">ENTER YOUR NAME</string>
+    <string name="name_hint">Your name</string>
+    <string name="save_new_game">SAVE &amp; NEW GAME</string>
+    <string name="btn_home_screen">HOME SCREEN</string>
+
+    <!-- Leaderboard -->
+    <string name="players_count">%d players</string>
+    <string name="leaderboard_empty_title">No scores yet</string>
+    <string name="leaderboard_empty_cta">Go spin the wheel!</string>
+    <string name="leaderboard_col_player">PLAYER</string>
+    <string name="leaderboard_col_coins">TOTAL COINS</string>
+    <string name="leaderboard_pts">pts</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_back">Back</string>
+    <string name="cd_locked">Locked</string>
 </resources>

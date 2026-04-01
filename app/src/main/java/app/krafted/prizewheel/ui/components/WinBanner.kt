@@ -115,7 +115,7 @@ fun WinBanner(segment: WheelSegment, coinsWon: Int, modifier: Modifier = Modifie
 
             Column {
                 Text(
-                    text = segment.name,
+                    text = segment.displayName,
                     color = segment.colour,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,

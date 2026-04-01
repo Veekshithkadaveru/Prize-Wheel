@@ -33,7 +33,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import app.krafted.prizewheel.R
 import app.krafted.prizewheel.ui.screens.HomeScreen
-import app.krafted.prizewheel.ui.screens.HistoryScreen
+import app.krafted.prizewheel.ui.screens.LeaderboardScreen
 import app.krafted.prizewheel.ui.screens.WheelScreen
 import app.krafted.prizewheel.viewmodel.WheelViewModel
 import kotlinx.coroutines.delay
@@ -42,7 +42,7 @@ sealed class Screen(val route: String) {
     data object Splash : Screen("splash")
     data object Home : Screen("home")
     data object Wheel : Screen("wheel")
-    data object History : Screen("history")
+    data object Leaderboard : Screen("leaderboard")
 }
 
 @Composable
@@ -60,14 +60,16 @@ fun NavGraph(navController: NavHostController, wheelViewModel: WheelViewModel) {
 
         composable(Screen.Home.route) {
             val uiState by wheelViewModel.uiState.collectAsState()
-            val history by wheelViewModel.spinHistory.collectAsState()
+            val leaderboard by wheelViewModel.leaderboardEntries.collectAsState()
 
             HomeScreen(
                 coinBalance = uiState.coins,
                 canSpin = uiState.canSpin,
-                historyCount = history.size,
+                leaderboardCount = leaderboard.size,
+                dailyRefillClaimed = uiState.dailyRefillClaimed,
+                lastRefillTimestamp = uiState.lastRefillTimestamp,
                 onNavigateToWheel = { navController.navigate(Screen.Wheel.route) },
-                onNavigateToHistory = { navController.navigate(Screen.History.route) },
+                onNavigateToLeaderboard = { navController.navigate(Screen.Leaderboard.route) },
                 onRefill = { wheelViewModel.refill() }
             )
         }
@@ -75,12 +77,12 @@ fun NavGraph(navController: NavHostController, wheelViewModel: WheelViewModel) {
         composable(Screen.Wheel.route) {
             WheelScreen(
                 viewModel = wheelViewModel,
-                onNavigateToHistory = { navController.navigate(Screen.History.route) }
+                onNavigateHome = { navController.popBackStack() }
             )
         }
 
-        composable(Screen.History.route) {
-            HistoryScreen(
+        composable(Screen.Leaderboard.route) {
+            LeaderboardScreen(
                 viewModel = wheelViewModel,
                 onNavigateBack = { navController.popBackStack() }
             )

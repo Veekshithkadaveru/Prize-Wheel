@@ -37,10 +37,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -86,9 +91,11 @@ private val HomeGoldBronze = Color(0xFFB8860B)
 fun HomeScreen(
     coinBalance: Int,
     canSpin: Boolean,
-    historyCount: Int,
+    leaderboardCount: Int,
+    dailyRefillClaimed: Boolean,
+    lastRefillTimestamp: Long,
     onNavigateToWheel: () -> Unit,
-    onNavigateToHistory: () -> Unit,
+    onNavigateToLeaderboard: () -> Unit,
     onRefill: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -139,6 +146,7 @@ fun HomeScreen(
                 )
         )
 
+
         val scrollState = rememberScrollState()
         Column(
             modifier = Modifier
@@ -148,7 +156,7 @@ fun HomeScreen(
                 .verticalScroll(scrollState),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(22.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Spacer(modifier = Modifier.height(34.dp))
 
@@ -175,7 +183,7 @@ fun HomeScreen(
             EpicPlayButton(
                 canSpin = canSpin,
                 onClick = {
-                    if (!canSpin) {
+                    if (!canSpin && !dailyRefillClaimed) {
                         onRefill()
                     }
                     onNavigateToWheel()
@@ -188,20 +196,18 @@ fun HomeScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                PremiumNavCard(
-                    label = "DAILY REWARD",
-                    subtitle = if (canSpin) "Balance topped off" else "Tap to claim",
-                    accentColor = if (canSpin) GoldDark else GoldLight,
-                    hasBadge = !canSpin,
-                    onClick = onRefill,
+                DailyRewardCard(
+                    claimed = dailyRefillClaimed,
+                    lastRefillTimestamp = lastRefillTimestamp,
+                    onClaim = onRefill,
                     modifier = Modifier.weight(1f)
                 )
                 PremiumNavCard(
-                    label = "HISTORY",
-                    subtitle = if (historyCount > 0) "$historyCount recorded" else "No spins yet",
+                    label = "LEADERBOARD",
+                    subtitle = if (leaderboardCount > 0) "$leaderboardCount players" else "No scores yet",
                     accentColor = HomeBlue,
                     hasBadge = false,
-                    onClick = onNavigateToHistory,
+                    onClick = onNavigateToLeaderboard,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -555,7 +561,7 @@ private fun PrizeShowcase() {
             ) {
                 Image(
                     painter = painterResource(id = segment.symbolRes),
-                    contentDescription = segment.name,
+                    contentDescription = segment.displayName,
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -788,6 +794,7 @@ private fun PremiumNavCard(
     subtitle: String,
     accentColor: Color,
     hasBadge: Boolean,
+    locked: Boolean = false,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -855,6 +862,25 @@ private fun PremiumNavCard(
             )
         }
 
+        if (locked) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-6).dp, y = (-4).dp)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF555D73)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Locked",
+                    tint = Color.White,
+                    modifier = Modifier.size(11.dp)
+                )
+            }
+        }
+
         if (hasBadge) {
             val infiniteTransition = rememberInfiniteTransition(label = "navBadge")
             val badgeScale by infiniteTransition.animateFloat(
@@ -884,4 +910,121 @@ private fun PremiumNavCard(
             )
         }
     }
+}
+
+@Composable
+private fun DailyRewardCard(
+    claimed: Boolean,
+    lastRefillTimestamp: Long,
+    onClaim: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val countdown = rememberCountdown24h(lastRefillTimestamp)
+    val accentColor = if (claimed) Color(0xFF555D73) else GoldLight
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "dailyCardScale"
+    )
+    val shape = CutCornerShape(topStart = 24.dp, bottomEnd = 24.dp)
+
+    Box(modifier = modifier) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer { scaleX = scale; scaleY = scale }
+                .shadow(12.dp, shape, ambientColor = accentColor.copy(alpha = 0.14f))
+                .clip(shape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(HomeCardTop, HomeCardBottom, accentColor.copy(alpha = 0.15f))
+                    )
+                )
+                .border(
+                    1.5.dp,
+                    Brush.verticalGradient(
+                        listOf(accentColor.copy(alpha = 0.62f), accentColor.copy(alpha = 0.18f))
+                    ),
+                    shape
+                )
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    enabled = !claimed,
+                    onClick = onClaim
+                )
+                .padding(vertical = 18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = "DAILY REWARD",
+                color = HomeCream,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp,
+                maxLines = 1
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            if (claimed) {
+                Text(
+                    text = countdown,
+                    color = HomeBlue,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp,
+                    maxLines = 1
+                )
+            } else {
+                Text(
+                    text = "Tap to claim +100",
+                    color = accentColor,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Normal,
+                    letterSpacing = 0.5.sp,
+                    maxLines = 1
+                )
+            }
+        }
+
+        if (claimed) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = (-6).dp, y = (-4).dp)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF555D73)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Lock,
+                    contentDescription = "Locked",
+                    tint = Color.White,
+                    modifier = Modifier.size(11.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun rememberCountdown24h(lastRefillTimestamp: Long): String {
+    var countdown by remember { mutableStateOf(calcCountdown24h(lastRefillTimestamp)) }
+    LaunchedEffect(lastRefillTimestamp) {
+        while (true) {
+            kotlinx.coroutines.delay(1_000L)
+            countdown = calcCountdown24h(lastRefillTimestamp)
+        }
+    }
+    return countdown
+}
+
+private fun calcCountdown24h(lastRefillTimestamp: Long): String {
+    val diff = (lastRefillTimestamp + 24 * 3_600_000L - System.currentTimeMillis()).coerceAtLeast(0L)
+    val h = diff / 3_600_000
+    val m = (diff % 3_600_000) / 60_000
+    val s = (diff % 60_000) / 1000
+    return "%02dh %02dm %02ds".format(h, m, s)
 }

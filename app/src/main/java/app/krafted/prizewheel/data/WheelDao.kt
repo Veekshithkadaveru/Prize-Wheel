@@ -20,6 +20,15 @@ interface WheelDao {
     @Insert
     suspend fun insertSpinResult(result: SpinResultEntity)
 
-    @Query("SELECT * FROM spin_results ORDER BY timestamp DESC LIMIT :limit")
-    fun getRecentSpinResults(limit: Int = 20): Flow<List<SpinResultEntity>>
+    @Query("SELECT * FROM spin_results ORDER BY coinsWon DESC LIMIT :limit")
+    fun getRecentLeaderboardResults(limit: Int = 20): Flow<List<SpinResultEntity>>
+
+    @Query("SELECT playerName, SUM(coinsWon) as totalCoins FROM spin_results GROUP BY playerName ORDER BY totalCoins DESC LIMIT 20")
+    fun getLeaderboardEntries(): Flow<List<LeaderboardEntry>>
+
+    @Query("UPDATE spin_results SET playerName = :name WHERE sessionId = :sessionId")
+    suspend fun updateSessionPlayerName(sessionId: Long, name: String)
+
+    @Query("UPDATE wallet SET lastRefillTimestamp = :timestamp WHERE id = 1")
+    suspend fun updateLastRefillTimestamp(timestamp: Long)
 }

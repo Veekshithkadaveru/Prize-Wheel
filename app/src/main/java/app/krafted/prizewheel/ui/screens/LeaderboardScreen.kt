@@ -1,6 +1,5 @@
 package app.krafted.prizewheel.ui.screens
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -31,23 +30,24 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import app.krafted.prizewheel.data.SpinResultEntity
-import app.krafted.prizewheel.game.WheelSegment
+import app.krafted.prizewheel.data.LeaderboardEntry
 import app.krafted.prizewheel.viewmodel.WheelViewModel
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+
+private val rankColors = listOf(
+    Color(0xFFFFD700),
+    Color(0xFFC0C0C0),
+    Color(0xFFCD7F32)
+)
 
 @Composable
-fun HistoryScreen(
+fun LeaderboardScreen(
     viewModel: WheelViewModel,
     onNavigateBack: () -> Unit
 ) {
-    val history by viewModel.spinHistory.collectAsState()
+    val entries by viewModel.leaderboardEntries.collectAsState()
 
     Box(
         modifier = Modifier
@@ -61,7 +61,6 @@ fun HistoryScreen(
         ) {
             Spacer(Modifier.height(48.dp))
 
-            // Header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -76,24 +75,23 @@ fun HistoryScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "SPIN HISTORY",
+                        text = "LEADERBOARD",
                         color = Color(0xFFFFD700),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 2.sp
                     )
                     Text(
-                        text = "Last ${history.size} spins",
+                        text = "${entries.size} players",
                         color = Color(0xFF8890A5),
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Normal
+                        fontSize = 13.sp
                     )
                 }
             }
 
             Spacer(Modifier.height(20.dp))
 
-            if (history.isEmpty()) {
+            if (entries.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -102,7 +100,7 @@ fun HistoryScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "No spins yet",
+                            text = "No scores yet",
                             color = Color(0xFF555D73),
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Medium
@@ -120,11 +118,11 @@ fun HistoryScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(start = 12.dp, end = 12.dp, bottom = 8.dp)
                 ) {
-                    Spacer(Modifier.width(52.dp)) // icon space
+                    Spacer(Modifier.width(36.dp))
                     Text(
-                        text = "RESULT",
+                        text = "PLAYER",
                         color = Color(0xFF555D73),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -132,20 +130,11 @@ fun HistoryScreen(
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = "COINS",
+                        text = "TOTAL COINS",
                         color = Color(0xFF555D73),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        modifier = Modifier.weight(0.6f)
-                    )
-                    Text(
-                        text = "TIME",
-                        color = Color(0xFF555D73),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        modifier = Modifier.weight(0.8f)
+                        letterSpacing = 1.sp
                     )
                 }
 
@@ -153,8 +142,8 @@ fun HistoryScreen(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    itemsIndexed(history) { _, result ->
-                        HistoryCard(result = result)
+                    itemsIndexed(entries) { index, entry ->
+                        LeaderboardRow(rank = index + 1, entry = entry)
                     }
                     item { Spacer(Modifier.height(24.dp)) }
                 }
@@ -164,86 +153,92 @@ fun HistoryScreen(
 }
 
 @Composable
-private fun HistoryCard(result: SpinResultEntity) {
-    val segment = try {
-        WheelSegment.valueOf(result.segmentName)
-    } catch (_: Exception) {
-        null
-    }
-    val segmentColor = segment?.colour ?: Color(0xFF607D8B)
+private fun LeaderboardRow(rank: Int, entry: LeaderboardEntry) {
+    val rankColor = rankColors.getOrElse(rank - 1) { Color(0xFF555D73) }
+    val isTopThree = rank <= 3
 
-    Box(
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
+            .background(
+                if (rank == 1)
+                    Brush.horizontalGradient(listOf(Color(0xFF221B08), Color(0xFF141929)))
+                else
+                    Brush.horizontalGradient(listOf(Color(0xFF141929), Color(0xFF141929)))
+            )
             .border(
-                width = 1.dp,
-                color = Color(0xFF252B3F),
+                width = if (isTopThree) 1.dp else 0.5.dp,
+                color = if (isTopThree) rankColor.copy(alpha = 0.35f) else Color(0xFF252B3F),
                 shape = RoundedCornerShape(12.dp)
             )
-            .background(Color(0xFF141929))
-            .padding(horizontal = 12.dp, vertical = 14.dp)
+            .padding(horizontal = 14.dp, vertical = 14.dp)
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth()
+        // Rank badge
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(
+                    if (isTopThree)
+                        Brush.radialGradient(listOf(rankColor.copy(alpha = 0.3f), Color.Transparent))
+                    else
+                        Brush.radialGradient(listOf(Color(0xFF252B3F), Color.Transparent))
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            // Segment color indicator + icon
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(segmentColor.copy(alpha = 0.15f))
-                    .border(1.dp, segmentColor.copy(alpha = 0.4f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                segment?.let {
-                    Image(
-                        painter = painterResource(id = it.symbolRes),
-                        contentDescription = it.name,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            // Segment name
             Text(
-                text = result.segmentName,
-                color = segmentColor,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Coins won
-            Text(
-                text = "+${"%,d".format(result.coinsWon)}",
-                color = Color(0xFFFFD700),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(0.6f)
-            )
-
-            // Timestamp
-            Text(
-                text = formatTimestamp(result.timestamp),
-                color = Color(0xFF8890A5),
-                fontSize = 12.sp,
-                modifier = Modifier.weight(0.8f)
+                text = "$rank",
+                color = rankColor,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Black
             )
         }
-    }
-}
 
-private fun formatTimestamp(timestamp: Long): String {
-    val now = System.currentTimeMillis()
-    val diff = now - timestamp
-    return when {
-        diff < 60_000 -> "Just now"
-        diff < 3_600_000 -> "${diff / 60_000}m ago"
-        diff < 86_400_000 -> "${diff / 3_600_000}h ago"
-        else -> SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault()).format(Date(timestamp))
+        Spacer(Modifier.width(14.dp))
+
+        // Avatar initial
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(rankColor.copy(alpha = 0.1f))
+                .border(1.dp, rankColor.copy(alpha = 0.3f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = entry.playerName.take(1).uppercase(),
+                color = rankColor,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        Text(
+            text = entry.playerName,
+            color = Color.White,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.weight(1f)
+        )
+
+        Text(
+            text = "%,d".format(entry.totalCoins),
+            color = Color(0xFFFFD700),
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Black
+        )
+
+        Spacer(Modifier.width(4.dp))
+
+        Text(
+            text = "pts",
+            color = Color(0xFF8890A5),
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Normal
+        )
     }
 }

@@ -5,6 +5,7 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -39,7 +40,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -62,10 +65,18 @@ import app.krafted.prizewheel.viewmodel.WheelViewModel
 @Composable
 fun WheelScreen(
     viewModel: WheelViewModel,
-    onNavigateToHistory: () -> Unit
+    onNavigateHome: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val rotation by viewModel.rotation.asState()
+    var showNameOverlay by remember { mutableStateOf(false) }
+    var nameInput by remember { mutableStateOf("") }
+
+    LaunchedEffect(uiState.sessionComplete, uiState.isSpinning) {
+        if (uiState.sessionComplete && !uiState.isSpinning) {
+            showNameOverlay = true
+        }
+    }
 
     LaunchedEffect(Unit) {
         viewModel.spinEvents.collect { event ->
@@ -127,7 +138,14 @@ fun WheelScreen(
         ) {
             Spacer(Modifier.height(48.dp))
 
-            CoinBalancePill(coins = uiState.coins)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CoinBalancePill(coins = uiState.coins)
+                SpinCountPill(used = uiState.paidSpinsUsed, total = 10)
+            }
 
             Spacer(Modifier.height(16.dp))
 
@@ -182,24 +200,152 @@ fun WheelScreen(
 
                 SpinButton(
                     onClick = { viewModel.spin() },
-                    enabled = uiState.canSpin && !uiState.isSpinning,
+                    enabled = uiState.canSpin && !uiState.isSpinning && !uiState.sessionComplete,
                     isSpinning = uiState.isSpinning
                 )
 
                 AnimatedVisibility(
-                    visible = !uiState.canSpin && !uiState.isSpinning,
+                    visible = !uiState.canSpin && !uiState.sessionComplete && !uiState.isSpinning,
                     enter = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
                     exit = fadeOut()
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Spacer(Modifier.height(12.dp))
-                        RefillButton(onClick = { viewModel.refill() })
+                        RefillButton(
+                            text = "REFILL COINS",
+                            onClick = { viewModel.refill() }
+                        )
                     }
                 }
 
                 Spacer(Modifier.height(16.dp))
+            }
+        }
 
-                HistoryNavButton(onClick = onNavigateToHistory)
+        // Session complete — name entry overlay
+        AnimatedVisibility(
+            visible = showNameOverlay,
+            enter = fadeIn(tween(400)),
+            exit = fadeOut(tween(300))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xE5080B14)),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(Color(0xFF1E1040), Color(0xFF0F0A24))
+                            )
+                        )
+                        .border(
+                            1.5.dp,
+                            Brush.horizontalGradient(
+                                listOf(Color(0xFFFFD700).copy(alpha = 0.6f), Color(0xFF67D4FF).copy(alpha = 0.4f))
+                            ),
+                            RoundedCornerShape(20.dp)
+                        )
+                        .padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "SESSION COMPLETE",
+                        color = Color(0xFFFFD700),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 3.sp
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "+${"%,d".format(uiState.sessionCoinsWon)} coins won",
+                        color = Color(0xFF67D4FF),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    Text(
+                        text = "ENTER YOUR NAME",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    androidx.compose.material3.TextField(
+                        value = nameInput,
+                        onValueChange = { nameInput = it },
+                        singleLine = true,
+                        placeholder = {
+                            Text("Your name", color = Color.White.copy(alpha = 0.3f))
+                        },
+                        colors = androidx.compose.material3.TextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedContainerColor = Color(0xFF1A1035),
+                            unfocusedContainerColor = Color(0xFF1A1035),
+                            focusedIndicatorColor = Color(0xFFFFD700),
+                            unfocusedIndicatorColor = Color(0xFF3A4160)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(20.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(Color(0xFFFF52D9), Color(0xFFFFB347))
+                                )
+                            )
+                            .clickable {
+                                val name = nameInput.trim().ifEmpty { "Anonymous" }
+                                viewModel.submitSession(name)
+                                showNameOverlay = false
+                                nameInput = ""
+                            }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "SAVE & NEW GAME",
+                            color = Color(0xFF080B14),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .background(Color.Transparent)
+                            .clickable {
+                                val name = nameInput.trim().ifEmpty { "Anonymous" }
+                                viewModel.submitSession(name)
+                                showNameOverlay = false
+                                nameInput = ""
+                                onNavigateHome()
+                            }
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "HOME SCREEN",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 2.sp
+                        )
+                    }
+                }
             }
         }
     }
@@ -207,6 +353,12 @@ fun WheelScreen(
 
 @Composable
 private fun CoinBalancePill(coins: Int) {
+    val animatedBalance by animateIntAsState(
+        targetValue = coins,
+        animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing),
+        label = "coinBalance"
+    )
+
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(24.dp))
@@ -245,7 +397,7 @@ private fun CoinBalancePill(coins: Int) {
             )
             Spacer(Modifier.width(10.dp))
             Text(
-                text = "%,d".format(coins),
+                text = "%,d".format(animatedBalance),
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
@@ -256,7 +408,26 @@ private fun CoinBalancePill(coins: Int) {
 }
 
 @Composable
-private fun SpinButton(onClick: () -> Unit, enabled: Boolean, isSpinning: Boolean) {
+private fun SpinCountPill(used: Int, total: Int) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(24.dp))
+            .background(Color.White.copy(alpha = 0.08f))
+            .border(1.dp, Color.White.copy(alpha = 0.15f), RoundedCornerShape(24.dp))
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            text = "SPINS: $used/$total",
+            color = if (used >= total) Color(0xFFFF52D9) else Color(0xFF67D4FF),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 1.sp
+        )
+    }
+}
+
+@Composable
+private fun SpinButton(onClick: () -> Unit, enabled: Boolean, isSpinning: Boolean, spinCost: Int = WheelViewModel.SPIN_COST) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val buttonScale by animateFloatAsState(
@@ -345,19 +516,46 @@ private fun SpinButton(onClick: () -> Unit, enabled: Boolean, isSpinning: Boolea
                 ),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = if (isSpinning) "..." else "SPIN",
-                color = Color.White,
-                fontSize = if (isSpinning) 28.sp else 22.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 3.sp
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = if (isSpinning) "..." else "SPIN",
+                    color = Color.White,
+                    fontSize = if (isSpinning) 28.sp else 22.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 3.sp
+                )
+                if (!isSpinning && enabled) {
+                    Spacer(Modifier.height(2.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(50.dp)
+                            .height(1.dp)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        Color.White.copy(alpha = 0.5f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "$spinCost COINS",
+                        color = Color.White.copy(alpha = 0.7f),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.sp
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun RefillButton(onClick: () -> Unit) {
+private fun RefillButton(text: String, onClick: () -> Unit) {
     val shape = CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp)
     Box(
         modifier = Modifier
@@ -378,7 +576,7 @@ private fun RefillButton(onClick: () -> Unit) {
             .padding(horizontal = 28.dp, vertical = 12.dp)
     ) {
         Text(
-            text = "REFILL COINS",
+            text = text,
             color = Color(0xFFFFD700),
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
@@ -387,22 +585,3 @@ private fun RefillButton(onClick: () -> Unit) {
     }
 }
 
-@Composable
-private fun HistoryNavButton(onClick: () -> Unit) {
-    val shape = CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp)
-    Box(
-        modifier = Modifier
-            .clip(shape)
-            .background(Color.White.copy(alpha = 0.05f))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp, vertical = 10.dp)
-    ) {
-        Text(
-            text = "SPIN HISTORY",
-            color = Color(0xFF67D4FF).copy(alpha = 0.9f),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 2.sp
-        )
-    }
-}

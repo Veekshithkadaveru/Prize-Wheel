@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.platform.LocalContext
 import app.krafted.prizewheel.game.WheelSegment
 import kotlin.math.cos
@@ -140,12 +141,21 @@ fun PrizeWheel(
             // Symbol image at segment midpoint
             val midAngleRad = Math.toRadians((startAngle + segmentAngle / 2f).toDouble())
             val symbolDist = innerRadius * 0.6f
-            val symbolOffset = Offset(
-                center.x + symbolDist * cos(midAngleRad).toFloat() - 40f,
-                center.y + symbolDist * sin(midAngleRad).toFloat() - 40f
+            val imageCenter = Offset(
+                center.x + symbolDist * cos(midAngleRad).toFloat(),
+                center.y + symbolDist * sin(midAngleRad).toFloat()
             )
+            val rotationDegrees = Math.toDegrees(midAngleRad).toFloat() + 90f
+
             bitmaps[index]?.let { bitmap ->
-                drawImage(bitmap, topLeft = symbolOffset)
+                withTransform({
+                    rotate(rotationDegrees, imageCenter)
+                }) {
+                    drawImage(
+                        image = bitmap,
+                        topLeft = Offset(imageCenter.x - 40f, imageCenter.y - 40f)
+                    )
+                }
             }
         }
 
